@@ -10,12 +10,11 @@
     <!-- Link to Flatpickr CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
-    <script type="module"  src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
     <!-- Add Firebase products that you want to use -->
-    <script type="module"  src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
     <!-- Firebase Firestore -->
-    <script type="module" src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js"></script>
-    
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js"></script>
 </head>
 <body>
     <div id="app">
@@ -59,13 +58,13 @@
     <script>
         // Firebase configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyDQj4UI89aQ2Q7IadYhlypv3A1RCVq6mqE",
-            authDomain: "expense-tracker-3aca6.firebaseapp.com",
-            projectId: "expense-tracker-3aca6",
-            storageBucket: "expense-tracker-3aca6.appspot.com",
-            messagingSenderId: "81384779428",
-            appId: "1:81384779428:web:2b5bf5a8d48d7b5d184031",
-            measurementId: "G-9C9XF3K3TC"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID",
+            measurementId: "YOUR_MEASUREMENT_ID"
         };
 
         // Initialize Firebase
@@ -80,129 +79,80 @@
             });
 
             const ctx = document.getElementById('myChart').getContext('2d');
-            let myChart; // Define myChart globally
+            let myChart = null; // Initialize chart variable
 
-            // Initialize Chart.js chart
-            function initChart() {
-                myChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: [],
-                        datasets: [{
-                            label: 'Expenses',
-                            data: [],
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        scales: {
-                            y: {
-                                beginAtZero: true
+            // Function to create or update Chart
+            function createOrUpdateChart(labels, data) {
+                if (!myChart) {
+                    myChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Expenses',
+                                data: data,
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
                             }
                         }
-                    }
-                });
-            }
-
-            // Show tracker when user is authenticated
-            function showTracker() {
-                document.getElementById('auth-box').style.display = 'none';
-                document.getElementById('tracker').style.display = 'block';
-                fetchExpenses();
-            }
-
-            // Hide tracker when user is not authenticated
-            function hideTracker() {
-                document.getElementById('auth-box').style.display = 'block';
-                document.getElementById('tracker').style.display = 'none';
-            }
-
-            // Toggle between Login and Sign Up forms
-            const toggleLink = document.getElementById('toggle-link');
-            toggleLink.addEventListener('click', () => {
-                const authTitle = document.getElementById('auth-title');
-                const authButton = document.getElementById('auth-button');
-                isLogin = !isLogin;
-                if (isLogin) {
-                    authTitle.textContent = 'Login';
-                    authButton.textContent = 'Login';
-                    toggleLink.textContent = 'Sign Up';
+                    });
                 } else {
-                    authTitle.textContent = 'Sign Up';
-                    authButton.textContent = 'Sign Up';
-                    toggleLink.textContent = 'Login';
+                    myChart.data.labels = labels;
+                    myChart.data.datasets[0].data = data;
+                    myChart.update();
                 }
-            });
+            }
 
-            // Handle authentication form submission
-            const authForm = document.getElementById('auth-form');
-            let isLogin = true; // Initial state is login
-            authForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                const email = document.getElementById('auth-email').value;
-                const password = document.getElementById('auth-password').value;
-
-                try {
-                    if (isLogin) {
-                        const userCredential = await auth.signInWithEmailAndPassword(email, password);
-                        console.log('User signed in: ', userCredential.user.email);
-                        showTracker();
-                    } else {
-                        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                        console.log('User registered: ', userCredential.user.email);
-                        showTracker();
-                    }
-                } catch (error) {
-                    document.getElementById('auth-error-message').textContent = error.message;
-                }
-            });
-
-            // Handle logout button click
-            const logoutBtn = document.getElementById('logout-btn');
-            logoutBtn.addEventListener('click', () => {
-                auth.signOut().then(() => {
-                    console.log('User signed out');
-                    hideTracker();
-                }).catch((error) => {
-                    console.error('Sign out error', error);
-                });
-            });
-
-            // Fetch expenses from Firestore
+            // Function to fetch and display expenses
             async function fetchExpenses() {
-                const expensesList = document.getElementById('expenses');
-                expensesList.innerHTML = ''; // Clear previous list
-
                 try {
                     const snapshot = await db.collection('expenses').get();
-                    snapshot.forEach(doc => {
-                        const expense = doc.data();
-                        const li = document.createElement('li');
-                        li.textContent = `${expense.name} - $${expense.amount} - ${expense.date}`;
-                        expensesList.appendChild(li);
-
-                        const deleteBtn = document.createElement('button');
-                        deleteBtn.textContent = 'Delete';
-                        deleteBtn.addEventListener('click', async () => {
-                            await db.collection('expenses').doc(doc.id).delete();
-                            fetchExpenses(); // Refresh expenses after deletion
-                        });
-                        li.appendChild(deleteBtn);
-                    });
-
-                    // Update chart with fetched data
-                    updateChart();
+                    const expenses = snapshot.docs.map(doc => doc.data());
+                    displayExpenses(expenses);
+                    updateChart(expenses);
                 } catch (error) {
-                    console.error('Error fetching expenses:', error);
+                    console.error('Error fetching expenses:', error.message);
                 }
             }
 
-            // Handle expense form submission
-            const expenseForm = document.getElementById('expense-form');
-            expenseForm.addEventListener('submit', async function(e) {
+            // Function to display expenses in the UI
+            function displayExpenses(expenses) {
+                const expensesList = document.getElementById('expenses');
+                expensesList.innerHTML = '';
+
+                expenses.forEach(expense => {
+                    const li = document.createElement('li');
+                    li.textContent = `${expense.name} - $${expense.amount} - ${expense.date}`;
+
+                    // Delete button
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.addEventListener('click', async () => {
+                        try {
+                            await db.collection('expenses').doc(expense.id).delete();
+                            fetchExpenses();
+                        } catch (error) {
+                            console.error('Error deleting expense:', error.message);
+                        }
+                    });
+                    li.appendChild(deleteBtn);
+
+                    expensesList.appendChild(li);
+                });
+            }
+
+            // Event listener for expense form submission (add or edit)
+            document.getElementById('expense-form').addEventListener('submit', async function (e) {
                 e.preventDefault();
+
                 const name = document.getElementById('expense-name').value;
                 const amount = parseFloat(document.getElementById('expense-amount').value);
                 const date = document.getElementById('expense-date').value;
@@ -213,7 +163,7 @@
                         amount: amount,
                         date: date
                     });
-                    fetchExpenses(); // Refresh expenses after addition
+                    fetchExpenses();
                     document.getElementById('expense-name').value = '';
                     document.getElementById('expense-amount').value = '';
                     document.getElementById('expense-date').value = '';
@@ -222,35 +172,95 @@
                 }
             });
 
-            // Update Chart.js chart with current data
-            function updateChart() {
-                db.collection('expenses').get().then(snapshot => {
-                    const labels = [];
-                    const data = [];
-                    snapshot.forEach(doc => {
-                        const expense = doc.data();
-                        labels.push(expense.name);
-                        data.push(expense.amount);
-                    });
-                    myChart.data.labels = labels;
-                    myChart.data.datasets[0].data = data;
-                    myChart.update();
-                }).catch(error => {
-                    console.error('Error updating chart:', error);
-                });
+            // Function to update Chart with fetched expenses
+            function updateChart(expenses) {
+                const labels = expenses.map(expense => expense.name);
+                const data = expenses.map(expense => expense.amount);
+
+                createOrUpdateChart(labels, data);
             }
 
-            // Check if user is logged in on page load
-            auth.onAuthStateChanged(user => {
-                if (user) {
-                    console.log('User signed in:', user.email);
+            // Initial fetch and display of expenses
+            fetchExpenses();
+        });
+
+        // Handle authentication form submission
+        const authForm = document.getElementById('auth-form');
+        let isLogin = true; // Initial state is login
+        authForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+
+            try {
+                if (isLogin) {
+                    const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                    console.log('User signed in: ', userCredential.user.email);
+                    document.getElementById('auth-error-message').textContent = '';
                     showTracker();
                 } else {
-                    console.log('No user signed in');
-                    hideTracker();
+                    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                    console.log('User registered: ', userCredential.user.email);
+                    document.getElementById('auth-error-message').textContent = '';
+                    showTracker();
                 }
+            } catch (error) {
+                document.getElementById('auth-error-message').textContent = error.message;
+            }
+        });
+
+        // Toggle between Login and Sign Up forms
+        const toggleLink = document.getElementById('toggle-link');
+        toggleLink.addEventListener('click', () => {
+            const authTitle = document.getElementById('auth-title');
+            const authButton = document.getElementById('auth-button');
+            isLogin = !isLogin;
+            if (isLogin) {
+                authTitle.textContent = 'Login';
+                authButton.textContent = 'Login';
+                toggleLink.textContent = 'Sign Up';
+            } else {
+                authTitle.textContent = 'Sign Up';
+                authButton.textContent = 'Sign Up';
+                toggleLink.textContent = 'Login';
+            }
+        });
+
+        // Handle logout button click
+        const logoutBtn = document.getElementById('logout-btn');
+        logoutBtn.addEventListener('click', () => {
+            auth.signOut().then(() => {
+                console.log('User signed out');
+                hideTracker();
+            }).catch((error) => {
+                console.error('Sign out error', error);
             });
         });
+
+        // Function to show tracker interface
+        function showTracker() {
+            document.getElementById('auth-box').style.display = 'none';
+            document.getElementById('tracker').style.display = 'block';
+            fetchExpenses();
+        }
+
+        // Function to hide tracker interface
+        function hideTracker() {
+            document.getElementById('auth-box').style.display = 'block';
+            document.getElementById('tracker').style.display = 'none';
+        }
+
+        // Check if user is already signed in
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                console.log('User signed in:', user.email);
+                showTracker();
+            } else {
+                console.log('No user signed in');
+                hideTracker();
+            }
+        });
+
     </script>
 </body>
 </html>
