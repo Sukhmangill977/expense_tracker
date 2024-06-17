@@ -1,0 +1,114 @@
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f5f5f5;
+}
+
+#auth-box {
+    background: white;
+    padding: 40px;
+    border-radius: 8px;
+    width: 300px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+#auth-title {
+    text-align: center;
+}
+
+#auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#auth-form input, #auth-button {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#auth-button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer; /* Added cursor pointer */
+}
+
+#app {
+    width: 90%;
+    max-width: 600px;
+    margin: 50px auto;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+input, button {
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+button {
+    background-color: #28a745;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #218838;
+}
+
+#expense-list {
+    margin-top: 20px;
+}
+
+#expenses {
+    list-style: none;
+    padding: 0;
+}
+
+#expenses li {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+#expenses li:last-child {
+    border-bottom: none;
+}
+
+@media (max-width: 600px) {
+    #app {
+        width: 100%;
+        margin: 20px auto;
+        padding: 10px;
+    }
+
+    input, button {
+        padding: 8px;
+        margin: 3px 0;
+    }
+
+    h1, h2 {
+        font-size: 1.5em;
+    }
+}

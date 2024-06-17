@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Link to Chart.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Link to Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+    <script type="module"  src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <!-- Add Firebase products that you want to use -->
+    <script type="module"  src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
+    <!-- Firebase Firestore -->
+    <script type="module" src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js"></script>
+    
+</head>
+<body>
+    <div id="app">
+        <div id="auth-box">
+            <h1 id="auth-title">Login</h1>
+            <form id="auth-form">
+                <input type="email" id="auth-email" placeholder="Email" required>
+                <input type="password" id="auth-password" placeholder="Password" required>
+                <button type="submit" id="auth-button">Login</button>
+                <p id="auth-toggle">Don't have an account? <a href="#" id="toggle-link">Sign Up</a></p>
+                <p id="auth-error-message"></p>
+            </form>
+        </div>
+
+        <div id="tracker" style="display:none;">
+            <h1>Expense Tracker</h1>
+            <nav>
+                <button id="logout-btn">Logout</button>
+            </nav>
+            <form id="expense-form">
+                <input type="text" id="expense-name" placeholder="Expense Name" required>
+                <input type="number" id="expense-amount" placeholder="Amount" required>
+                <input type="text" id="expense-date" placeholder="Select Date" required>
+                <button type="submit">Add Expense</button>
+            </form>
+            <div id="expense-list">
+                <h2>Expenses</h2>
+                <ul id="expenses"></ul>
+            </div>
+            <div id="expense-chart">
+                <h2>Expense Chart</h2>
+                <canvas id="myChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Link to Flatpickr JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <!-- Your custom JavaScript file -->
+    <script src="app.js"></script>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDQj4UI89aQ2Q7IadYhlypv3A1RCVq6mqE",
+            authDomain: "expense-tracker-3aca6.firebaseapp.com",
+            projectId: "expense-tracker-3aca6",
+            storageBucket: "expense-tracker-3aca6.appspot.com",
+            messagingSenderId: "81384779428",
+            appId: "1:81384779428:web:2b5bf5a8d48d7b5d184031",
+            measurementId: "G-9C9XF3K3TC"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        document.addEventListener('DOMContentLoaded', function () {
+            flatpickr('#expense-date', {
+                dateFormat: 'Y-m-d'
+            });
+
+            const ctx = document.getElementById('myChart').getContext('2d');
+            let myChart; // Define myChart globally
+
+            // Initialize Chart.js chart
+            function initChart() {
+                myChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Expenses',
+                            data: [],
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Show tracker when user is authenticated
+            function showTracker() {
+                document.getElementById('auth-box').style.display = 'none';
+                document.getElementById('tracker').style.display = 'block';
+                fetchExpenses();
+            }
+
+            // Hide tracker when user is not authenticated
+            function hideTracker() {
+                document.getElementById('auth-box').style.display = 'block';
+                document.getElementById('tracker').style.display = 'none';
+            }
+
+            // Toggle between Login and Sign Up forms
+            const toggleLink = document.getElementById('toggle-link');
+            toggleLink.addEventListener('click', () => {
+                const authTitle = document.getElementById('auth-title');
+                const authButton = document.getElementById('auth-button');
+                isLogin = !isLogin;
+                if (isLogin) {
+                    authTitle.textContent = 'Login';
+                    authButton.textContent = 'Login';
+                    toggleLink.textContent = 'Sign Up';
+                } else {
+                    authTitle.textContent = 'Sign Up';
+                    authButton.textContent = 'Sign Up';
+                    toggleLink.textContent = 'Login';
+                }
+            });
+
+            // Handle authentication form submission
+            const authForm = document.getElementById('auth-form');
+            let isLogin = true; // Initial state is login
+            authForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const email = document.getElementById('auth-email').value;
+                const password = document.getElementById('auth-password').value;
+
+                try {
+                    if (isLogin) {
+                        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                        console.log('User signed in: ', userCredential.user.email);
+                        showTracker();
+                    } else {
+                        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                        console.log('User registered: ', userCredential.user.email);
+                        showTracker();
+                    }
+                } catch (error) {
+                    document.getElementById('auth-error-message').textContent = error.message;
+                }
+            });
+
+            // Handle logout button click
+            const logoutBtn = document.getElementById('logout-btn');
+            logoutBtn.addEventListener('click', () => {
+                auth.signOut().then(() => {
+                    console.log('User signed out');
+                    hideTracker();
+                }).catch((error) => {
+                    console.error('Sign out error', error);
+                });
+            });
+
+            // Fetch expenses from Firestore
+            async function fetchExpenses() {
+                const expensesList = document.getElementById('expenses');
+                expensesList.innerHTML = ''; // Clear previous list
+
+                try {
+                    const snapshot = await db.collection('expenses').get();
+                    snapshot.forEach(doc => {
+                        const expense = doc.data();
+                        const li = document.createElement('li');
+                        li.textContent = `${expense.name} - $${expense.amount} - ${expense.date}`;
+                        expensesList.appendChild(li);
+
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.textContent = 'Delete';
+                        deleteBtn.addEventListener('click', async () => {
+                            await db.collection('expenses').doc(doc.id).delete();
+                            fetchExpenses(); // Refresh expenses after deletion
+                        });
+                        li.appendChild(deleteBtn);
+                    });
+
+                    // Update chart with fetched data
+                    updateChart();
+                } catch (error) {
+                    console.error('Error fetching expenses:', error);
+                }
+            }
+
+            // Handle expense form submission
+            const expenseForm = document.getElementById('expense-form');
+            expenseForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const name = document.getElementById('expense-name').value;
+                const amount = parseFloat(document.getElementById('expense-amount').value);
+                const date = document.getElementById('expense-date').value;
+
+                try {
+                    await db.collection('expenses').add({
+                        name: name,
+                        amount: amount,
+                        date: date
+                    });
+                    fetchExpenses(); // Refresh expenses after addition
+                    document.getElementById('expense-name').value = '';
+                    document.getElementById('expense-amount').value = '';
+                    document.getElementById('expense-date').value = '';
+                } catch (error) {
+                    console.error('Error adding expense:', error);
+                }
+            });
+
+            // Update Chart.js chart with current data
+            function updateChart() {
+                db.collection('expenses').get().then(snapshot => {
+                    const labels = [];
+                    const data = [];
+                    snapshot.forEach(doc => {
+                        const expense = doc.data();
+                        labels.push(expense.name);
+                        data.push(expense.amount);
+                    });
+                    myChart.data.labels = labels;
+                    myChart.data.datasets[0].data = data;
+                    myChart.update();
+                }).catch(error => {
+                    console.error('Error updating chart:', error);
+                });
+            }
+
+            // Check if user is logged in on page load
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    console.log('User signed in:', user.email);
+                    showTracker();
+                } else {
+                    console.log('No user signed in');
+                    hideTracker();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
